@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Мои финансы</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{--bg:#0f0f13;--bg2:#1a1a22;--bg3:#22222e;--accent:#6c63ff;--green:#22c55e;--red:#ef4444;--text:#f1f5f9;--muted:#94a3b8;--border:rgba(255,255,255,0.08);--radius:14px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
+.nav{display:flex;background:var(--bg2);border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;z-index:100}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 14px;gap:4px;background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer}
+.nav-btn.active{color:#a78bfa}
+.nav-btn svg{width:22px;height:22px}
+.page{display:none;padding:16px}
+.page.active{display:block}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.header h1{font-size:20px;font-weight:700}
+.month-nav{display:flex;align-items:center;gap:10px}
+.month-nav button{background:var(--bg3);border:none;color:var(--text);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+.month-label{font-size:14px;font-weight:600;min-width:110px;text-align:center}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.card{background:var(--bg2);border-radius:var(--radius);padding:16px}
+.card.full{grid-column:1/-1}
+.card-label{font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em}
+.card-value{font-size:20px;font-weight:700}
+.card-value.green{color:var(--green)}.card-value.red{color:var(--red)}.card-value.accent{color:#a78bfa}
+.chart-wrap{position:relative;height:200px;margin:8px 0}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.section-title{font-size:13px;font-weight:600;color:var(--muted);margin:20px 0 10px;text-transform:uppercase;letter-spacing:0.05em}
+.entry-list{display:flex;flex-direction:column;gap:8px}
+.entry{background:var(--bg2);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px}
+.entry-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.entry-icon.income{background:rgba(34,197,94,0.15)}.entry-icon.expense{background:rgba(239,68,68,0.12)}
+.entry-info{flex:1;min-width:0}
+.entry-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entry-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.entry-amount{font-size:14px;font-weight:700;text-align:right;flex-shrink:0}
+.entry-amount.income{color:var(--green)}.entry-amount.expense{color:var(--red)}
+.del-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;font-size:18px}
+.fab{position:fixed;bottom:80px;right:16px;width:52px;height:52px;border-radius:50%;background:var(--accent);border:none;color:white;font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(108,99,255,0.4);z-index:99}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:flex-end}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:16px;text-align:center}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;color:var(--muted);margin-bottom:6px;display:block}
+.form-input,.form-select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;font-family:inherit;outline:none}
+.form-select option{background:var(--bg3)}
+.type-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.type-btn{padding:10px;border-radius:10px;border:2px solid var(--border);background:transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer}
+.type-btn.active.expense{border-color:var(--red);color:var(--red);background:rgba(239,68,68,0.1)}
+.type-btn.active.income{border-color:var(--green);color:var(--green);background:rgba(34,197,94,0.1)}
+.btn-primary{width:100%;padding:14px;background:var(--accent);border:none;border-radius:12px;color:white;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px}
+.budget-item{background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:10px}
+.budget-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.budget-cat{font-size:14px;font-weight:500}
+.progress-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px}
+.progress-fill.ok{background:var(--green)}.progress-fill.warn{background:#f59e0b}.progress-fill.over{background:var(--red)}
+.budget-input{width:90px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 8px;color:var(--text);font-size:13px;text-align:right;font-family:inherit;outline:none}
+.history-month{background:var(--bg2);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.history-month-title{font-size:15px;font-weight:600;margin-bottom:8px}
+.history-stats{display:flex;gap:16px;font-size:13px}
+.h-in{color:var(--green)}.h-out{color:var(--red)}.h-bal{color:var(--muted)}
+.empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.day-group{margin-bottom:16px}
+.day-label{font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600}
+</style>
+</head>
+<body>
+<div id="page-home" class="page active">
+  <div class="header"><h1>Мои финансы</h1><div class="month-nav"><button onclick="changeMonth(-1)">‹</button><span class="month-label" id="month-label"></span><button onclick="changeMonth(1)">›</button></div></div>
+  <div class="cards">
+    <div class="card"><div class="card-label">Доходы</div><div class="card-value green" id="total-income">0</div></div>
+    <div class="card"><div class="card-label">Расходы</div><div class="card-value red" id="total-expense">0</div></div>
+    <div class="card full"><div class="card-label">Остаток</div><div class="card-value accent" id="total-balance">0</div></div>
+  </div>
+  <div class="card"><div class="card-label">По категориям</div><div class="chart-wrap"><canvas id="pie-chart" role="img" aria-label="Расходы по категориям">Диаграмма расходов</canvas></div><div class="legend" id="pie-legend"></div></div>
+  <div class="section-title">Последние записи</div>
+  <div class="entry-list" id="recent-entries"></div>
+</div>
+
+<div id="page-entries" class="page">
+  <div class="header"><h1>Записи</h1><div class="month-nav"><button onclick="changeMonth(-1)">‹</button><span class="month-label" id="month-label2"></span><button onclick="changeMonth(1)">›</button></div></div>
+  <div id="entries-by-day"></div>
+</div>
+
+<div id="page-budget" class="page">
+  <div class="header"><h1>Бюджет</h1><div class="month-nav"><button onclick="changeMonth(-1)">‹</button><span class="month-label" id="month-label3"></span><button onclick="changeMonth(1)">›</button></div></div>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Установи лимиты по категориям.</p>
+  <div id="budget-list"></div>
+  <button class="btn-primary" onclick="saveBudgets()">Сохранить лимиты</button>
+</div>
+
+<div id="page-history" class="page">
+  <div class="header"><h1>История</h1></div>
+  <div id="history-list"></div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('home',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Главная</button>
+  <button class="nav-btn" onclick="showPage('entries',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Записи</button>
+  <button class="nav-btn" onclick="showPage('budget',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Бюджет</button>
+  <button class="nav-btn" onclick="showPage('history',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>История</button>
+</nav>
+
+<button class="fab" onclick="openModal()">+</button>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-title">Новая запись</div>
+    <div class="type-toggle">
+      <button class="type-btn active expense" id="btn-expense" onclick="setType('expense')">💸 Расход</button>
+      <button class="type-btn" id="btn-income" onclick="setType('income')">💰 Доход</button>
+    </div>
+    <div class="form-group"><label class="form-label">Сумма (сум)</label><input class="form-input" type="number" id="f-amount" placeholder="0"></div>
+    <div class="form-group"><label class="form-label">Категория</label><select class="form-select" id="f-category"></select></div>
+    <div class="form-group"><label class="form-label">Заметка</label><input class="form-input" type="text" id="f-note" placeholder="Необязательно"></div>
+    <button class="btn-primary" onclick="saveEntry()">Записать</button>
+  </div>
+</div>
+
+<script>
+const EXPENSE_CATS=["Еда/рестораны","Бензин","Авто","Семья","Одежда","Коммуналка","Кредиты","Личное","Развлечения","Здоровье","Работа/бизнес","На будущее","На поездку","Подарки","Ремонт","Электроника","Интернет/связь","Подписки","Дал в долг","Другое"];
+const INCOME_CATS=["Зарплата","От папы","Вернули долг","Другой доход"];
+const EMOJI={"Еда/рестораны":"🍔","Бензин":"⛽","Авто":"🚗","Семья":"👨‍👩‍👧","Одежда":"👕","Коммуналка":"💡","Кредиты":"🏦","Личное":"😊","Развлечения":"🎮","Здоровье":"🏥","Работа/бизнес":"💼","На будущее":"🐷","На поездку":"✈️","Подарки":"🎁","Ремонт":"🔨","Электроника":"📱","Интернет/связь":"📡","Подписки":"📺","Дал в долг":"🤝","Другое":"📦","Зарплата":"💰","От папы":"👨","Вернули долг":"🔄","Другой доход":"💵"};
+const COLORS=["#6c63ff","#22c55e","#f59e0b","#ef4444","#3b82f6","#ec4899","#14b8a6","#8b5cf6","#f97316","#06b6d4","#84cc16","#e11d48","#0891b2","#7c3aed","#059669","#d97706","#dc2626","#2563eb","#9333ea","#16a34a"];
+const MONTHS=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+
+let tg=window.Telegram.WebApp; tg.expand();
+let userId=tg.initDataUnsafe?.user?.id||0;
+let curDate=new Date(); curDate.setDate(1);
+let allData={},budgets={},entryType="expense",pieChart=null;
+
+function mk(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
+function fmt(n){return Math.round(n).toLocaleString('ru-RU')+' сум'}
+function monthName(d){return`${MONTHS[d.getMonth()]} ${d.getFullYear()}`}
+
+function changeMonth(dir){curDate=new Date(curDate.getFullYear(),curDate.getMonth()+dir,1);updateLabels();renderAll()}
+function updateLabels(){const n=monthName(curDate);['month-label','month-label2','month-label3'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=n})}
+function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');btn.classList.add('active');renderAll()}
+
+function getEntries(){const m=allData[mk(curDate)]||{};const r=[];for(const[day,es]of Object.entries(m)){if(!day.startsWith('budget'))es.forEach(e=>r.push({...e,dayKey:day}))}return r}
+
+function renderHome(){
+  const entries=getEntries();
+  const inc=entries.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
+  const exp=entries.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const bal=inc-exp;
+  document.getElementById('total-income').textContent=fmt(inc);
+  document.getElementById('total-expense').textContent=fmt(exp);
+  const be=document.getElementById('total-balance');
+  be.textContent=fmt(bal);be.className='card-value '+(bal>=0?'green':'red');
+  const catMap={};
+  entries.filter(e=>e.type==='expense').forEach(e=>{catMap[e.category]=(catMap[e.category]||0)+e.amount});
+  const cats=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  if(pieChart){pieChart.destroy();pieChart=null}
+  if(cats.length>0){
+    pieChart=new Chart(document.getElementById('pie-chart'),{type:'doughnut',data:{labels:cats.map(c=>c[0]),datasets:[{data:cats.map(c=>c[1]),backgroundColor:COLORS.slice(0,cats.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>` ${fmt(ctx.raw)} (${exp>0?(ctx.raw/exp*100).toFixed(0):0}%)`}}}}});
+    document.getElementById('pie-legend').innerHTML=cats.slice(0,8).map((c,i)=>`<div class="legend-item"><span class="legend-dot" style="background:${COLORS[i]}"></span>${c[0]}</div>`).join('');
+  }
+  const recent=entries.sort((a,b)=>(b.dayKey+b.time).localeCompare(a.dayKey+a.time)).slice(0,5);
+  document.getElementById('recent-entries').innerHTML=recent.length?recent.map(e=>entryHTML(e)).join(''):'<div class="empty"><div class="empty-icon">📭</div>Записей пока нет</div>';
+}
+
+function entryHTML(e){
+  const emoji=EMOJI[e.category]||'📦';
+  const sign=e.type==='income'?'+':'-';
+  return`<div class="entry"><div class="entry-icon ${e.type}">${emoji}</div><div class="entry-info"><div class="entry-name">${e.category}</div><div class="entry-meta">${e.note?e.note+' · ':''}${e.time||''}</div></div><div class="entry-amount ${e.type}">${sign}${Math.round(e.amount).toLocaleString('ru-RU')}</div><button class="del-btn" onclick="deleteEntry('${e.id}','${e.dayKey}')">×</button></div>`;
+}
+
+function renderEntries(){
+  const entries=getEntries();const byDay={};
+  entries.forEach(e=>{if(!byDay[e.dayKey])byDay[e.dayKey]=[];byDay[e.dayKey].push(e)});
+  const days=Object.keys(byDay).sort().reverse();
+  document.getElementById('entries-by-day').innerHTML=days.length?days.map(day=>{
+    const d=new Date(day);const label=d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
+    return`<div class="day-group"><div class="day-label">${label}</div><div class="entry-list">${byDay[day].map(e=>entryHTML(e)).join('')}</div></div>`;
+  }).join(''):'<div class="empty"><div class="empty-icon">📭</div>Записей нет</div>';
+}
+
+function renderBudget(){
+  const entries=getEntries();const spent={};
+  entries.filter(e=>e.type==='expense').forEach(e=>{spent[e.category]=(spent[e.category]||0)+e.amount});
+  document.getElementById('budget-list').innerHTML=EXPENSE_CATS.map(cat=>{
+    const s=spent[cat]||0;const lim=budgets[cat]||0;
+    let pct=0,cls='ok';
+    if(lim>0){pct=Math.min(s/lim*100,100);cls=pct>=100?'over':pct>=75?'warn':'ok'}
+    return`<div class="budget-item"><div class="budget-header"><span class="budget-cat">${EMOJI[cat]||'📦'} ${cat}</span><div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:var(--muted)">${Math.round(s).toLocaleString('ru-RU')} /</span><input class="budget-input" type="number" data-cat="${cat}" value="${lim||''}" placeholder="лимит"></div></div>${lim>0?`<div class="progress-bar"><div class="progress-fill ${cls}" style="width:${pct}%"></div></div>`:''}</div>`;
+  }).join('');
+}
+
+function renderHistory(){
+  const months=Object.keys(allData).filter(k=>!k.startsWith('budget')).sort().reverse();
+  document.getElementById('history-list').innerHTML=months.length?months.map(m=>{
+    let inc=0,exp=0;
+    for(const[day,es]of Object.entries(allData[m]||{})){if(!day.startsWith('budget'))es.forEach(e=>{if(e.type==='income')inc+=e.amount;else exp+=e.amount})}
+    const bal=inc-exp;const[y,mo]=m.split('-');
+    return`<div class="history-month"><div class="history-month-title">${MONTHS[parseInt(mo)-1]} ${y}</div><div class="history-stats"><span class="h-in">+${Math.round(inc).toLocaleString('ru-RU')}</span><span class="h-out">-${Math.round(exp).toLocaleString('ru-RU')}</span><span class="h-bal">= ${Math.round(bal).toLocaleString('ru-RU')}</span></div></div>`;
+  }).join(''):'<div class="empty"><div class="empty-icon">🗓</div>История пуста</div>';
+}
+
+function renderAll(){updateLabels();const p=document.querySelector('.page.active').id;if(p==='page-home')renderHome();else if(p==='page-entries')renderEntries();else if(p==='page-budget')renderBudget();else if(p==='page-history')renderHistory()}
+
+function setType(type){
+  entryType=type;
+  document.getElementById('btn-expense').className='type-btn'+(type==='expense'?' active expense':'');
+  document.getElementById('btn-income').className='type-btn'+(type==='income'?' active income':'');
+  const sel=document.getElementById('f-category');
+  sel.innerHTML=(type==='income'?INCOME_CATS:EXPENSE_CATS).map(c=>`<option value="${c}">${EMOJI[c]||''} ${c}</option>`).join('');
+}
+
+function openModal(){setType('expense');document.getElementById('f-amount').value='';document.getElementById('f-note').value='';document.getElementById('modal-overlay').classList.add('open')}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open')}
+function closeModalOutside(e){if(e.target===document.getElementById('modal-overlay'))closeModal()}
+
+async function saveEntry(){
+  const amount=parseFloat(document.getElementById('f-amount').value);
+  if(!amount||amount<=0){alert('Введи сумму!');return}
+  const category=document.getElementById('f-category').value;
+  const note=document.getElementById('f-note').value;
+  const now=new Date();
+  const dk=now.toISOString().split('T')[0];
+  const m=mk(now);
+  const entry={id:Date.now(),amount,type:entryType,category,note,time:now.toTimeString().slice(0,5),date:now.toLocaleDateString('ru-RU')};
+  if(!allData[m])allData[m]={};
+  if(!allData[m][dk])allData[m][dk]=[];
+  allData[m][dk].push(entry);
+  try{await fetch('/api/entry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId,entry,month_key:m,day_key:dk})})}catch(e){}
+  closeModal();curDate=new Date(now.getFullYear(),now.getMonth(),1);renderAll();
+}
+
+async function deleteEntry(id,dk){
+  const m=mk(curDate);
+  if(allData[m]&&allData[m][dk])allData[m][dk]=allData[m][dk].filter(e=>String(e.id)!==String(id));
+  try{await fetch('/api/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId,entry_id:parseInt(id),month_key:m})})}catch(e){}
+  renderAll();
+}
+
+async function saveBudgets(){
+  document.querySelectorAll('.budget-input').forEach(inp=>{const v=parseFloat(inp.value)||0;if(v>0)budgets[inp.dataset.cat]=v;else delete budgets[inp.dataset.cat]});
+  try{await fetch('/api/budget',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId,month_key:mk(curDate),budgets})})}catch(e){}
+  tg.showAlert('Лимиты сохранены! ✅');renderBudget();
+}
+
+async function loadData(){
+  try{const r=await fetch(`/api/data?user_id=${userId}`);allData=await r.json()}catch(e){allData={}}
+  try{const r=await fetch(`/api/budget?user_id=${userId}&month_key=${mk(curDate)}`);budgets=await r.json()}catch(e){budgets={}}
+  renderAll();
+}
+
+setType('expense');loadData();
+</script>
+</body>
+</html>
