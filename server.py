@@ -1,5 +1,6 @@
 import os
 import json
+import glob
 from aiohttp import web
 from datetime import date
 
@@ -16,7 +17,9 @@ def save_data(data):
         json.dump(data,f,ensure_ascii=False,indent=2)
 
 async def handle_index(request):
-    with open("webapp/index.html","r",encoding="utf-8") as f:
+    paths = glob.glob("/app/webapp*/index.html")
+    html_path = paths[0] if paths else "webapp/index.html"
+    with open(html_path,"r",encoding="utf-8") as f:
         content=f.read()
     return web.Response(text=content,content_type="text/html")
 
