@@ -6,7 +6,7 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 TOKEN = os.getenv("BOT_TOKEN", "8643925833:AAGlky5L6iytMziWdd65QTcGQjPPExuMiw0")
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://your-app.railway.app")
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://finance-bot-production-7055.up.railway.app")
 DATA_FILE = "data.json"
 
 EXPENSE_CATEGORIES = [
@@ -59,19 +59,19 @@ def get_user_data(data,user_id):
     return data[uid]
 
 def parse_amount(text):
-    t=text.lower().replace(" ","")
-    patterns=[
-        (r"(\d+(?:[.,]\d+)?)млн",lambda m:float(m.group(1).replace(",","."))*1_000_000),
-        (r"(\d+(?:[.,]\d+)?)mln",lambda m:float(m.group(1).replace(",","."))*1_000_000),
-        (r"(\d+(?:[.,]\d+)?)м\b",lambda m:float(m.group(1).replace(",","."))*1_000_000),
-        (r"(\d+(?:[.,]\d+)?)к\b",lambda m:float(m.group(1).replace(",","."))*1_000),
-        (r"(\d+(?:[.,]\d+)?)k\b",lambda m:float(m.group(1).replace(",","."))*1_000),
-        (r"(\d+(?:[.,]\d+)?)тыс",lambda m:float(m.group(1).replace(",","."))*1_000),
-        (r"(\d+(?:[.,]\d+)?)tis",lambda m:float(m.group(1).replace(",","."))*1_000),
-        (r"(\d[\d\s]*\d|\d+)",lambda m:float(m.group(1).replace(" ",""))),
+    t = text.lower()
+    patterns = [
+        (r"(\d+(?:[.,]\d+)?)\s*млн", lambda m: float(m.group(1).replace(",",".")) * 1_000_000),
+        (r"(\d+(?:[.,]\d+)?)\s*mln", lambda m: float(m.group(1).replace(",",".")) * 1_000_000),
+        (r"(\d+(?:[.,]\d+)?)\s*м\b", lambda m: float(m.group(1).replace(",",".")) * 1_000_000),
+        (r"(\d+(?:[.,]\d+)?)\s*тыс", lambda m: float(m.group(1).replace(",",".")) * 1_000),
+        (r"(\d+(?:[.,]\d+)?)\s*tis", lambda m: float(m.group(1).replace(",",".")) * 1_000),
+        (r"(\d+(?:[.,]\d+)?)\s*к", lambda m: float(m.group(1).replace(",",".")) * 1_000),
+        (r"(\d+(?:[.,]\d+)?)\s*k", lambda m: float(m.group(1).replace(",",".")) * 1_000),
+        (r"(\d[\d\s]*\d|\d+)", lambda m: float(m.group(1).replace(" ",""))),
     ]
-    for pattern,converter in patterns:
-        match=re.search(pattern,t)
+    for pattern, converter in patterns:
+        match = re.search(pattern, t)
         if match:
             try: return int(converter(match))
             except: pass
